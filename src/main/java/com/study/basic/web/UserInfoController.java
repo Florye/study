@@ -1,0 +1,127 @@
+package com.study.basic.web;
+
+import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+import java.util.UUID;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.study.basic.pojo.Cls;
+import com.study.basic.pojo.UserInfo;
+import com.study.basic.service.IBasicService;
+import com.study.common.util.MD5;
+import com.study.question.pojo.Question;
+import com.study.question.service.IQuestionService;
+
+@Controller
+@RequestMapping("/basic")
+public class UserInfoController {
+	@Autowired
+	private IBasicService basicService;
+	@Autowired
+	private IQuestionService questionService;
+	@RequestMapping(path="/usermain",method={RequestMethod.GET,RequestMethod.POST})
+	public ModelAndView userMain() throws Exception{
+		ModelAndView mv=new ModelAndView();
+		List<UserInfo> userList=basicService.listAllUserInfo();
+		if (userList.size()>0) {
+			List<Cls> clsList=basicService.listAllCls();
+			mv.addObject("clsList", clsList);
+			mv.addObject("userList", userList);
+		} else {
+			mv.addObject("msg", "当前无数据");
+		}
+		mv.setViewName("back/user");
+		return mv;
+	}
+	@RequestMapping(path="/edituser",method={RequestMethod.GET,RequestMethod.POST})
+	public @ResponseBody UserInfo editUser(Integer id) throws Exception{
+		return basicService.selectByPrimaryKey(id);
+	}
+	@RequestMapping(path="/saveuser",method={RequestMethod.GET,RequestMethod.POST})
+	public @ResponseBody UserInfo saveUser(UserInfo userInfo,HttpServletRequest request,MultipartFile phone) throws Exception{
+		if (phone.getOriginalFilename() != "") {
+			String newHead=UUID.randomUUID().toString()+phone.getOriginalFilename();
+			userInfo.setUserHead(newHead);
+			String imgPath=request.getServletContext().getRealPath("img");
+			File file=new File(imgPath,"/"+newHead);
+			phone.transferTo(file);
+		}
+		SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		String date=sdf.format(new Date());
+		Date newDate=sdf.parse(date);
+		userInfo.setUserPasswd(MD5.enctypeMD5("haha"+userInfo.getUserPasswd()));
+		if (userInfo.getUserId() == null) {// 新增
+			userInfo.setUserModified(newDate);
+			if(basicService.addUserInfoSelective(userInfo)>0){
+				return basicService.selectByPrimaryKey(userInfo.getUserId());
+			}
+		}
+		return basicService.updateUserInfo(userInfo);
+	}
+	@RequestMapping(path="/deleteuser",method={RequestMethod.GET,RequestMethod.POST})
+	public @ResponseBody boolean deleteUser(@RequestBody UserInfo userInfo) throws Exception{
+		return basicService.updateUserStatus(userInfo);
+	}
+	@RequestMapping("/login")
+	public @ResponseBody UserInfo login(String userLogin,String userPasswd,HttpServletRequest request) {
+		UserInfo userInfo=null;
+		userInfo=basicService.queryUserByNameAndPwd(userLogin,userPasswd);
+		if (userInfo!=null) {
+			HttpSession session=request.getSession();
+			session.setAttribute("user", userInfo);
+			session.setMaxInactiveInterval(1800);
+		}
+		return userInfo;
+	}
+	@RequestMapping("/islogin")
+	public @ResponseBody boolean isLogin(String userLogin,String userPasswd,HttpServletRequest request) {
+		Boolean rt=false;
+		HttpSession session=request.getSession();
+		if (session.getAttribute("user") !=null) {
+			rt=true;
+		}
+		return rt;
+	}
+	@RequestMapping("/verifyoldpwd")
+	public @ResponseBody boolean verifyOldpwd(String oldPwd,HttpServletRequest request) {
+		Boolean rt=false;
+		HttpSession session=request.getSession();
+		UserInfo userInfo=(UserInfo)session.getAttribute("user");
+		if (MD5.enctypeMD5("haha"+oldPwd).equals(userInfo.getUserPasswd())) {
+			rt=true;
+		}
+		return rt;
+	}
+	@RequestMapping("/changepwd")
+	public @ResponseBody boolean changePwd(String oldPwd,String newPwd,HttpServletRequest request) {
+		Boolean rt=false;
+		HttpSession session=request.getSession();
+		UserInfo userInfo=(UserInfo)session.getAttribute("user");
+		if (MD5.enctypeMD5("haha"+oldPwd).equals(userInfo.getUserPasswd())) {
+			userInfo.setUserPasswd(MD5.enctypeMD5("haha"+newPwd));
+			rt=basicService.updateUserPwd(userInfo);
+		}
+		return rt;
+	}
+	@RequestMapping("/quit")
+	public @ResponseBody ModelAndView quit(HttpServletRequest request) {
+		ModelAndView mv=new ModelAndView();
+		HttpSession session=request.getSession();
+		session.setAttribute("user", null);
+		mv.setViewName("/index");
+		return mv;
+	}
+}

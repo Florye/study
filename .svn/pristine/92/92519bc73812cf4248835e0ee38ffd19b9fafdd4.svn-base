@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.study.question.dao.QuestionMapper">
+  <resultMap id="BaseResultMap" type="com.study.question.pojo.Question">
+    <id column="question_id" jdbcType="INTEGER" property="questionId" />
+    <result column="question_title" jdbcType="VARCHAR" property="questionTitle" />
+    <result column="question_tag1" jdbcType="VARCHAR" property="questionTag1" />
+    <result column="question_tag2" jdbcType="VARCHAR" property="questionTag2" />
+    <result column="question_tag3" jdbcType="VARCHAR" property="questionTag3" />
+    <result column="question_votenum" jdbcType="INTEGER" property="questionVotenum" />
+    <result column="question_answernum" jdbcType="INTEGER" property="questionAnswernum" />
+    <result column="question_viewnum" jdbcType="INTEGER" property="questionViewnum" />
+    <result column="question_status" jdbcType="INTEGER" property="questionStatus" />
+    <result column="question_createtime" jdbcType="TIMESTAMP" property="questionCreatetime" />
+    <result column="question_modified" jdbcType="TIMESTAMP" property="questionModified" />
+    <association property="userInfo" javaType="userInfo"
+    select="com.study.basic.dao.UserInfoMapper.selectByPrimaryKey" column="question_userid"
+    ></association>
+    <association property="questionType" javaType="questionType"
+    select="com.study.question.dao.QuestionTypeMapper.selectByPrimaryKey" column="question_typeid"
+    ></association>
+  </resultMap>
+  <resultMap extends="BaseResultMap" id="ResultMapWithBLOBs" type="com.study.question.pojo.Question">
+    <result column="question_content" jdbcType="LONGVARCHAR" property="questionContent" />
+    <collection property="answerList" ofType="answer"
+    select="com.study.question.dao.AnswerMapper.listPageAnswerByQuestionId" column="question_id"
+    >
+    </collection>
+  </resultMap>
+  <resultMap extends="ResultMapWithBLOBs" id="ResultMapOrderByAnswerNum" type="com.study.question.pojo.Question">
+    <result column="question_content" jdbcType="LONGVARCHAR" property="questionContent" />
+    <collection property="answerList" ofType="answer"
+    select="com.study.question.dao.AnswerMapper.listPageAnswerOrderByVote" column="question_id"
+    >
+    </collection>
+  </resultMap>
+  <sql id="Base_Column_List">
+    question_id, question_title, question_typeid, question_tag1, question_tag2, question_tag3, 
+    question_userid, question_votenum, question_answernum, question_viewnum, question_status, 
+    question_createtime, question_modified
+  </sql>
+  <sql id="Blob_Column_List">
+    question_content
+  </sql>
+  <select id="selectByPrimaryKey" parameterType="java.lang.Integer" resultMap="ResultMapWithBLOBs">
+    select 
+    <include refid="Base_Column_List" />
+    ,
+    <include refid="Blob_Column_List" />
+    from question
+    where question_id = #{questionId,jdbcType=INTEGER}
+  </select>
+  <select id="listPageQuestionByTypeId" resultMap="ResultMapWithBLOBs" parameterType="java.lang.Integer">
+    select 
+    <include refid="Base_Column_List" />
+    ,
+    <include refid="Blob_Column_List" />
+    from question
+    where question_typeid = #{typeId,jdbcType=INTEGER} 
+    order by question_createtime desc
+  </select>
+  
+  <select id="listPageQuestionLikeQuestionTitle" resultMap="ResultMapWithBLOBs">
+    select 
+    <include refid="Base_Column_List" />
+    ,
+    <include refid="Blob_Column_List" />
+    from question
+    where question_typeid = #{questiontypeId,jdbcType=INTEGER}
+    order by question_createtime desc
+  </select>
+  <select id="listPageQuestionByAnswernum" resultMap="ResultMapWithBLOBs" parameterType="java.lang.Integer">
+    select 
+    <include refid="Base_Column_List" />
+    ,
+    <include refid="Blob_Column_List" />
+    from question
+    where question_typeid = #{questiontypeId,jdbcType=INTEGER} and question_answernum = 0
+    order by question_createtime desc
+  </select>
+  <select id="listPageQuestionOrderByViewnum" resultMap="ResultMapWithBLOBs">
+    select 
+    <include refid="Base_Column_List" />
+    ,
+    <include refid="Blob_Column_List" />
+    from question
+    where question_typeid = #{questiontypeId,jdbcType=INTEGER}
+    order by question_viewnum desc
+  </select>
+  <select id="listPageQuestionOrderByAnswerVote" resultMap="ResultMapOrderByAnswerNum">
+    select 
+    <include refid="Base_Column_List" />
+    ,
+    <include refid="Blob_Column_List" />
+    from question
+    where question_id = #{questionId,jdbcType=INTEGER}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Integer">
+    delete from question
+    where question_id = #{questionId,jdbcType=INTEGER}
+  </delete>
+  <insert id="insert" parameterType="com.study.question.pojo.Question">
+    insert into question (question_id, question_title, question_typeid, 
+      question_tag1, question_tag2, question_tag3, 
+      question_userid, question_votenum, question_answernum, 
+      question_viewnum, question_status, question_createtime, 
+      question_modified, question_content
+      )
+    values (#{questionId,jdbcType=INTEGER}, #{questionTitle,jdbcType=VARCHAR}, #{questionType.questiontypeId,jdbcType=INTEGER}, 
+      #{questionTag1,jdbcType=VARCHAR}, #{questionTag2,jdbcType=VARCHAR}, #{questionTag3,jdbcType=VARCHAR}, 
+      #{user.userId,jdbcType=INTEGER}, #{questionVotenum,jdbcType=INTEGER}, #{questionAnswernum,jdbcType=INTEGER}, 
+      #{questionViewnum,jdbcType=INTEGER}, #{questionStatus,jdbcType=INTEGER}, #{questionCreatetime,jdbcType=TIMESTAMP}, 
+      #{questionModified,jdbcType=TIMESTAMP}, #{questionContent,jdbcType=LONGVARCHAR}
+      )
+  </insert>
+  <insert id="insertSelective" parameterType="com.study.question.pojo.Question"
+   useGeneratedKeys="true" keyProperty="questionId">
+    insert into question
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="questionId != null">
+        question_id,
+      </if>
+      <if test="questionTitle != null">
+        question_title,
+      </if>
+      <if test="questionType != null and questionType.questiontypeId != null">
+        question_typeid,
+      </if>
+      <if test="questionTag1 != null">
+        question_tag1,
+      </if>
+      <if test="questionTag2 != null">
+        question_tag2,
+      </if>
+      <if test="questionTag3 != null">
+        question_tag3,
+      </if>
+      <if test="userInfo != null and userInfo.userId != null">
+        question_userid,
+      </if>
+      <if test="questionVotenum != null">
+        question_votenum,
+      </if>
+      <if test="questionAnswernum != null">
+        question_answernum,
+      </if>
+      <if test="questionViewnum != null">
+        question_viewnum,
+      </if>
+      <if test="questionStatus != null">
+        question_status,
+      </if>
+      <if test="questionCreatetime != null">
+        question_createtime,
+      </if>
+      <if test="questionModified != null">
+        question_modified,
+      </if>
+      <if test="questionContent != null">
+        question_content,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="questionId != null">
+        #{questionId,jdbcType=INTEGER},
+      </if>
+      <if test="questionTitle != null">
+        #{questionTitle,jdbcType=VARCHAR},
+      </if>
+      <if test="questionType != null and questionType.questiontypeId != null">
+        #{questionType.questiontypeId,jdbcType=INTEGER},
+      </if>
+      <if test="questionTag1 != null">
+        #{questionTag1,jdbcType=VARCHAR},
+      </if>
+      <if test="questionTag2 != null">
+        #{questionTag2,jdbcType=VARCHAR},
+      </if>
+      <if test="questionTag3 != null">
+        #{questionTag3,jdbcType=VARCHAR},
+      </if>
+      <if test="userInfo != null and userInfo.userId != null">
+        #{userInfo.userId,jdbcType=INTEGER},
+      </if>
+      <if test="questionVotenum != null">
+        #{questionVotenum,jdbcType=INTEGER},
+      </if>
+      <if test="questionAnswernum != null">
+        #{questionAnswernum,jdbcType=INTEGER},
+      </if>
+      <if test="questionViewnum != null">
+        #{questionViewnum,jdbcType=INTEGER},
+      </if>
+      <if test="questionStatus != null">
+        #{questionStatus,jdbcType=INTEGER},
+      </if>
+      <if test="questionCreatetime != null">
+        #{questionCreatetime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="questionModified != null">
+        #{questionModified,jdbcType=TIMESTAMP},
+      </if>
+      <if test="questionContent != null">
+        #{questionContent,jdbcType=LONGVARCHAR},
+      </if>
+    </trim>
+  </insert>
+  <update id="updateByPrimaryKeySelective" parameterType="com.study.question.pojo.Question">
+    update question
+    <set>
+      <if test="questionTitle != null">
+        question_title = #{questionTitle,jdbcType=VARCHAR},
+      </if>
+      <if test="questionType != null and questionType.questiontypeId != null">
+        question_typeid = #{questionType.questiontypeId,jdbcType=INTEGER},
+      </if>
+      <if test="questionTag1 != null">
+        question_tag1 = #{questionTag1,jdbcType=VARCHAR},
+      </if>
+      <if test="questionTag2 != null">
+        question_tag2 = #{questionTag2,jdbcType=VARCHAR},
+      </if>
+      <if test="questionTag3 != null">
+        question_tag3 = #{questionTag3,jdbcType=VARCHAR},
+      </if>
+      <if test="userInfo != null and userInfo.userId != null">
+        question_userid = #{userInfo.userId,jdbcType=INTEGER},
+      </if>
+      <if test="questionVotenum != null">
+        question_votenum = #{questionVotenum,jdbcType=INTEGER},
+      </if>
+      <if test="questionAnswernum != null">
+        question_answernum = #{questionAnswernum,jdbcType=INTEGER},
+      </if>
+      <if test="questionViewnum != null">
+        question_viewnum = #{questionViewnum,jdbcType=INTEGER},
+      </if>
+      <if test="questionStatus != null">
+        question_status = #{questionStatus,jdbcType=INTEGER},
+      </if>
+      <if test="questionCreatetime != null">
+        question_createtime = #{questionCreatetime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="questionModified != null">
+        question_modified = #{questionModified,jdbcType=TIMESTAMP},
+      </if>
+      <if test="questionContent != null">
+        question_content = #{questionContent,jdbcType=LONGVARCHAR},
+      </if>
+    </set>
+    where question_id = #{questionId,jdbcType=INTEGER}
+  </update>
+  <update id="updateByPrimaryKeyWithBLOBs" parameterType="com.study.question.pojo.Question">
+    update question
+    set question_title = #{questionTitle,jdbcType=VARCHAR},
+      question_typeid = #{questionType.questiontypeId,jdbcType=INTEGER},
+      question_tag1 = #{questionTag1,jdbcType=VARCHAR},
+      question_tag2 = #{questionTag2,jdbcType=VARCHAR},
+      question_tag3 = #{questionTag3,jdbcType=VARCHAR},
+      question_userid = #{user.userId,jdbcType=INTEGER},
+      question_votenum = #{questionVotenum,jdbcType=INTEGER},
+      question_answernum = #{questionAnswernum,jdbcType=INTEGER},
+      question_viewnum = #{questionViewnum,jdbcType=INTEGER},
+      question_status = #{questionStatus,jdbcType=INTEGER},
+      question_createtime = #{questionCreatetime,jdbcType=TIMESTAMP},
+      question_modified = #{questionModified,jdbcType=TIMESTAMP},
+      question_content = #{questionContent,jdbcType=LONGVARCHAR}
+    where question_id = #{questionId,jdbcType=INTEGER}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.study.question.pojo.Question">
+    update question
+    set question_title = #{questionTitle,jdbcType=VARCHAR},
+      question_typeid = #{questionType.questiontypeId,jdbcType=INTEGER},
+      question_tag1 = #{questionTag1,jdbcType=VARCHAR},
+      question_tag2 = #{questionTag2,jdbcType=VARCHAR},
+      question_tag3 = #{questionTag3,jdbcType=VARCHAR},
+      question_userid = #{userInfo.userId,jdbcType=INTEGER},
+      question_votenum = #{questionVotenum,jdbcType=INTEGER},
+      question_answernum = #{questionAnswernum,jdbcType=INTEGER},
+      question_viewnum = #{questionViewnum,jdbcType=INTEGER},
+      question_status = #{questionStatus,jdbcType=INTEGER},
+      question_createtime = #{questionCreatetime,jdbcType=TIMESTAMP},
+      question_modified = #{questionModified,jdbcType=TIMESTAMP}
+    where question_id = #{questionId,jdbcType=INTEGER}
+  </update>
+ </mapper>
